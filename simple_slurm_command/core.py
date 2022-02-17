@@ -1,10 +1,11 @@
 import argparse
 import os
 import subprocess
+from typing import Union
 
 
-class Slurm():
-    '''Simple Slurm class for running sbatch commands.
+class SlurmCommand():
+    '''Simple SlurmCommand class for running sbatch commands.
 
     See https://slurm.schedmd.com/sbatch.html for a complete list of arguments
     accepted by the sbatch command (ex. -a, --array).
@@ -31,11 +32,11 @@ class Slurm():
 
         # add filename patterns as static variables
         for pattern in read_simple_txt('filename_patterns.txt'):
-            setattr(Slurm, *pattern)
+            setattr(SlurmCommand, *pattern)
 
         # add output environment variables as static variables
         for (var, ) in read_simple_txt('output_env_vars.txt'):
-            setattr(Slurm, var, '$' + var)
+            setattr(SlurmCommand, var, '$' + var)
 
         # add provided arguments in constructor
         self.add_arguments(*args, **kwargs)
@@ -88,7 +89,7 @@ class Slurm():
 
     @staticmethod
     def _valid_key(key: str) -> str:
-        '''Long arguments (for slurm) constructed with '-' have been internally
+        '''Long arguments (for slurmCommand) constructed with '-' have been internally
          represented with '_' (for Python). Correct for this in the output.
         '''
         return key.replace('_', '-')
@@ -102,21 +103,38 @@ class Slurm():
         script_cmd = '\n'.join((f'#!{shell}', '', *args, ''))
         return script_cmd
 
-    def srun(self, run_cmd: str, srun_cmd: str = 'srun') -> int:
+    def srun(self, run_cmd: str, srun_cmd: str = 'srun',
+             pty: str = '', convert: bool = True) -> str:
         '''Run the srun command with all the (previously) set arguments and
         the provided command to in 'run_cmd'.
         '''
+
+        if pty:
+            # If pty is set, --output or --error are ignored.
+            setattr(self.namespace, 'output', None)
+            setattr(self.namespace, 'error', None)
+
         args = (
             f'--{self._valid_key(k)}={v}'
             for k, v in vars(self.namespace).items() if v is not None
         )
-        cmd = ' '.join((srun_cmd, *args, run_cmd))
 
-        result = subprocess.run(cmd, shell=True, check=True)
-        return result.returncode
+        if pty:
+            cmd = '\n'.join((
+                ' '.join((srun_cmd, *args, '--pty', pty)) + ' << EOF',
+                (run_cmd.replace('$', '\\$') if convert else run_cmd),
+                'exit',  # NOTE: Without 'exit', slurm gets stuck in a weird state that doesn't take in command.
+                'EOF',
+            ))
+        else:
+            cmd = ' '.join((srun_cmd, *args, run_cmd))
+
+        # result = subprocess.run(cmd, shell=True, check=True)
+        # return result.returncode
+        return cmd
 
     def sbatch(self, run_cmd: str, convert: bool = True, verbose: bool = True,
-               sbatch_cmd: str = 'sbatch', shell: str = '/bin/sh') -> int:
+               sbatch_cmd: str = 'sbatch', shell: str = '/bin/sh') -> str:
         '''Run the sbatch command with all the (previously) set arguments and
         the provided command to in 'run_cmd'.
 
@@ -140,14 +158,15 @@ class Slurm():
             run_cmd.replace('$', '\\$') if convert else run_cmd,
             'EOF',
         ))
-        result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
-        success_msg = 'Submitted batch job'
-        stdout = result.stdout.decode('utf-8')
-        assert success_msg in stdout, result.stderr
-        if verbose:
-            print(stdout)
-        job_id = int(stdout.split(' ')[3])
-        return job_id
+        # result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        # success_msg = 'Submitted batch job'
+        # stdout = result.stdout.decode('utf-8')
+        # assert success_msg in stdout, result.stderr
+        # if verbose:
+        #     print(stdout)
+        # job_id = int(stdout.split(' ')[3])
+        # return job_id
+        return cmd
 
 
 class Namespace:
@@ -156,7 +175,7 @@ class Namespace:
 
 
 def create_setter_method(key: str):
-    '''Creates the setter method for the given 'key' attribute of a Slurm
+    '''Creates the setter method for the given 'key' attribute of a SlurmCommand
     object
     '''
 
@@ -164,7 +183,7 @@ def create_setter_method(key: str):
         self.add_arguments(key, value)
     set_key.__name__ = f'set_{key}'
     set_key.__doc__ = f'Setter method for the argument "{key}"'
-    setattr(Slurm, set_key.__name__, set_key)
+    setattr(SlurmCommand, set_key.__name__, set_key)
 
 
 def fmt_key(key: str) -> str:
@@ -175,9 +194,9 @@ def fmt_key(key: str) -> str:
     return key
 
 
-def fmt_value(value: str) -> str:
+def fmt_value(value: Union[str, None]) -> Union[str, None]:
     '''Maintain correct formatting for values in key-value pairs'''
-    return str(value).strip()
+    return str(value).strip() if value is not None else None
 
 
 def read_simple_txt(path: str) -> list:

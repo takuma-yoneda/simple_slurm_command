@@ -6,7 +6,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from simple_slurm import Slurm
+from simple_slurm_command import SlurmCommand
 
 
 class Testing(unittest.TestCase):
@@ -21,7 +21,7 @@ class Testing(unittest.TestCase):
 '''
 
     def test_01_args_short(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             '-a', '3-11',
             '-c', '15',
             '-J', 'name',
@@ -31,7 +31,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_02_args_long(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             '--array', '3-11',
             '--cpus_per_task', '15',
             '--job_name', 'name',
@@ -41,7 +41,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_03_args_simple(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             'array', '3-11',
             'cpus_per_task', '15',
             'job_name', 'name',
@@ -51,7 +51,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_04_kwargs(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             array='3-11',
             cpus_per_task='15',
             job_name='name',
@@ -61,7 +61,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_05_add_arguments_single(self):
-        slurm = Slurm()
+        slurm = SlurmCommand()
         slurm.add_arguments(
             array='3-11',
             cpus_per_task='15',
@@ -72,7 +72,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_06_add_arguments_multiple(self):
-        slurm = Slurm()
+        slurm = SlurmCommand()
         slurm.add_arguments(array='3-11')
         slurm.add_arguments(cpus_per_task='15')
         slurm.add_arguments(job_name='name')
@@ -81,7 +81,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_07_setter_methods(self):
-        slurm = Slurm()
+        slurm = SlurmCommand()
         slurm.set_array('3-11')
         slurm.set_cpus_per_task('15')
         slurm.set_job_name('name')
@@ -90,7 +90,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_08_parse_range(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             array=range(3, 12),
             cpus_per_task='15',
             job_name='name',
@@ -100,7 +100,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_09_parse_int(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             array=range(3, 12),
             cpus_per_task=15,
             job_name='name',
@@ -110,7 +110,7 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_10_parse_dict(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             array=range(3, 12),
             cpus_per_task=15,
             job_name='name',
@@ -120,24 +120,24 @@ class Testing(unittest.TestCase):
         self.assertEqual(self.script, str(slurm))
 
     def test_11_filename_patterns(self):
-        slurm = Slurm(
+        slurm = SlurmCommand(
             array=range(3, 12),
             cpus_per_task=15,
             job_name='name',
             dependency=dict(after=65541, afterok=34987),
-            output=f'{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
+            output=f'{SlurmCommand.JOB_ARRAY_MASTER_ID}_{SlurmCommand.JOB_ARRAY_ID}.out',
         )
         self.assertEqual(self.script, str(slurm))
 
     def test_12_output_env_vars_object(self):
-        slurm = Slurm()
+        slurm = SlurmCommand()
         self.assertEqual(slurm.SLURM_ARRAY_TASK_ID, r'$SLURM_ARRAY_TASK_ID')
 
     def test_13_output_env_vars(self):
-        self.assertEqual(Slurm.SLURM_ARRAY_TASK_ID, r'$SLURM_ARRAY_TASK_ID')
+        self.assertEqual(SlurmCommand.SLURM_ARRAY_TASK_ID, r'$SLURM_ARRAY_TASK_ID')
 
     def test_14_srun_returncode(self):
-        slurm = Slurm()
+        slurm = SlurmCommand()
         if shutil.which('srun') is not None:
             code = slurm.srun('echo Hello!')
         else:
@@ -148,7 +148,7 @@ class Testing(unittest.TestCase):
     def test_15_sbatch_execution(self):
         with io.StringIO() as buffer:
             with contextlib.redirect_stdout(buffer):
-                slurm = Slurm()
+                slurm = SlurmCommand()
                 if shutil.which('sbatch') is not None:
                     job_id = slurm.sbatch('echo Hello!')
                 else:
