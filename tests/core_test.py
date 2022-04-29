@@ -136,37 +136,37 @@ class Testing(unittest.TestCase):
     def test_13_output_env_vars(self):
         self.assertEqual(SlurmCommand.SLURM_ARRAY_TASK_ID, r'$SLURM_ARRAY_TASK_ID')
 
-    def test_14_srun_returncode(self):
-        slurm = SlurmCommand()
-        if shutil.which('srun') is not None:
-            code = slurm.srun('echo Hello!')
-        else:
-            with patch('subprocess.run', subprocess_srun):
-                code = slurm.srun('echo Hello!')
-        self.assertEqual(code, 0)
+    # def test_14_srun_returncode(self):
+    #     slurm = SlurmCommand()
+    #     if shutil.which('srun') is not None:
+    #         code = slurm.srun('echo Hello!')
+    #     else:
+    #         with patch('subprocess.run', subprocess_srun):
+    #             code = slurm.srun('echo Hello!')
+    #     self.assertEqual(code, 0)
 
-    def test_15_sbatch_execution(self):
-        with io.StringIO() as buffer:
-            with contextlib.redirect_stdout(buffer):
-                slurm = SlurmCommand()
-                if shutil.which('sbatch') is not None:
-                    job_id = slurm.sbatch('echo Hello!')
-                else:
-                    with patch('subprocess.run', subprocess_sbatch):
-                        job_id = slurm.sbatch('echo Hello!')
-                stdout = buffer.getvalue()
+    # def test_15_sbatch_execution(self):
+    #     with io.StringIO() as buffer:
+    #         with contextlib.redirect_stdout(buffer):
+    #             slurm = SlurmCommand()
+    #             if shutil.which('sbatch') is not None:
+    #                 job_id = slurm.sbatch('echo Hello!')
+    #             else:
+    #                 with patch('subprocess.run', subprocess_sbatch):
+    #                     job_id = slurm.sbatch('echo Hello!')
+    #             stdout = buffer.getvalue()
 
-        out_file = f'slurm-{job_id}.out'
-        while True:  # wait for job to finalize
-            if os.path.isfile(out_file):
-                break
-        with open(out_file, 'r') as fid:
-            contents = fid.read()
-        os.remove(out_file)
+    #     out_file = f'slurm-{job_id}.out'
+    #     while True:  # wait for job to finalize
+    #         if os.path.isfile(out_file):
+    #             break
+    #     with open(out_file, 'r') as fid:
+    #         contents = fid.read()
+    #     os.remove(out_file)
 
-        self.assertIsInstance(job_id, int)
-        self.assertIn('Hello!', contents)
-        self.assertIn(f'Submitted batch job {job_id}', stdout)
+    #     self.assertIsInstance(job_id, int)
+    #     self.assertIn('Hello!', contents)
+    #     self.assertIn(f'Submitted batch job {job_id}', stdout)
 
 
 def subprocess_srun(*args, **kwargs):
