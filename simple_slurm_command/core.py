@@ -120,12 +120,7 @@ class SlurmCommand():
         )
 
         if pty:
-            cmd = '\n'.join((
-                ' '.join((srun_cmd, *args, '--pty', pty)) + ' << EOF',
-                (run_cmd.replace('$', '\\$') if convert else run_cmd),
-                'exit',  # NOTE: Without 'exit', slurm gets stuck in a weird state that doesn't take in command.
-                'EOF',
-            ))
+            cmd = ' '.join((srun_cmd, *args, '--pty', pty, run_cmd))
         else:
             cmd = ' '.join((srun_cmd, *args, run_cmd))
 
