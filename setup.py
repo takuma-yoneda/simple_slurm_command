@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='simple_slurm_command',
-    version='0.2.2',
+    version='0.2.3',
     author='Takuma Yoneda',
     description='A simple Python module to generate Slurm commands built on top of https://github.com/amq92/simple_slurm.',
     long_description=long_description,
